@@ -1,35 +1,56 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { fetchImages, Image } from './services/api';
+import { Searchbar } from './components/Searchbar/Searchbar';
+import { ImageGallery } from './components/ImageGallery/ImageGallery';
+import { Loader } from './components/Loader/Loader';
+import { Modal } from './components/Modal/Modal';
 
-function App() {
-  const [count, setCount] = useState(0)
+export const App = () => {
+  const [images, setImages] = useState<Image[]>([]);
+  const [query, setQuery] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!query.trim()) return;
+
+    const getImages = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchImages(query.trim());
+        setImages(data);
+      } catch (error) {
+        setError('Failed to fetch images');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getImages();
+  }, [query]);
+
+  const handleSubmit = (newQuery: string) => {
+    setQuery(newQuery);
+    setImages([]);
+  };
+
+  const handleImageClick = (largeImageURL: string) => {
+    setSelectedImage(largeImageURL);
+  };
+
+  const closeModal = () => {
+    setSelectedImage(null);
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
-
-export default App
+    <div>
+      <Searchbar onSubmit={handleSubmit} />
+      {loading && <Loader />}
+      {error && <p>{error}</p>}
+      <ImageGallery images={images} onImageClick={handleImageClick} />
+      {selectedImage && <Modal image={selectedImage} onClose={closeModal} />}
+    </div>
+  );
+};
